@@ -1,6 +1,7 @@
 # Cream (Non-Profit Dating App)
 
-# NOTE: NO LONGER LIVE! REMOVED API KEYS TO FORK, CAN STILL FOLLOW STEPS TO RUN LOCALLY
+## NOTE: NO LONGER LIVE. 
+Can still host locally, but Expo Go updates may cause unwanted issues
 
 ## Contributors
 - Eli Chandler (Team Lead, Backend + Dev Ops)
