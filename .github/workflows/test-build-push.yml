@@ -1,0 +1,40 @@
+name: test-build-push.yml
+on:
+  push:
+    branches:
+      - production
+    paths:
+      - 'backend/**'
+      - '.github/workflows/test-build-push.yml'
+
+jobs:
+  test-build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        
+      - name: Build and tag docker image
+        working-directory: backend
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ vars.IMAGE_REPO_NAME }}
+          TAG: ${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$TAG .
+          docker tag $REGISTRY/$REPOSITORY:$TAG $REGISTRY/$REPOSITORY:latest
+          docker push $REGISTRY/$REPOSITORY:$TAG
+          docker push $REGISTRY/$REPOSITORY:latest

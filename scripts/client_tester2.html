@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat with JWT</title>
+</head>
+<body>
+<div>
+    <label for="jwtToken">JWT Token: </label>
+    <input type="text" id="jwtToken">
+</div>
+<div>
+    <label for="userId">Your User ID: </label>
+    <span id="userId">Not fetched</span>
+</div>
+<div>
+    <label for="recipientId">Recipient User ID: </label>
+    <input type="text" id="recipientId">
+</div>
+<div>
+    <button onclick="fetchChatHistory()">Load Chat History</button>
+</div>
+<div>
+    <label for="message">Message: </label>
+    <input type="text" id="message">
+    <button onclick="sendMessage()">Send</button>
+</div>
+<div>
+    <button onclick="connect()">Connect to WebSocket</button>
+</div>
+<div>
+    <h2>Messages:</h2>
+    <pre id="messages"></pre>
+</div>
+
+<script>
+    let ws;
+    let userId;
+    let recipientId;
+    let jwtToken;
+    let chatHistoryLoaded = false;
+
+    document.getElementById('recipientId').addEventListener('change', function(event) {
+        recipientId = event.target.value;
+    });
+
+    document.getElementById('jwtToken').addEventListener('change', async function(event) {
+        jwtToken = event.target.value;
+        await fetchUserId();
+    });
+
+    async function fetchUserId() {
+        try {
+            const response = await fetch('http://localhost:8080/Cream/Me', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${jwtToken}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                userId = data.data.id;
+                document.getElementById('userId').innerText = userId;
+            } else {
+                console.error('Failed to fetch user ID');
+                document.getElementById('userId').innerText = 'Error fetching user ID';
+            }
+        } catch (error) {
+            console.error('Error fetching user ID:', error);
+            document.getElementById('userId').innerText = 'Error fetching user ID';
+        }
+    }
+
+    async function fetchChatHistory() {
+        if (!userId || !recipientId || !jwtToken) {
+            alert('Please enter your Recipient ID and JWT token.');
+            return;
+        }
+
+        console.log(`Fetching chat history for user ${userId} and recipient ${recipientId}`);
+        try {
+            const response = await fetch(`http://localhost:8080/Cream/Messages/History?recipientId=${recipientId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${jwtToken}`
+                }
+            });
+
+            // Clear existing messages
+            document.getElementById('messages').innerText = '';
+
+            if (response.ok) {
+                const messages = (await response.json()).data;
+
+                if (messages.length > 0) {
+                    messages.forEach(msg => {
+                        const sender = msg.senderId === parseInt(userId) ? 'Me' : `User ${msg.senderId}`;
+                        document.getElementById('messages').innerText += `${sender}: ${msg.body}\n`;
+                    });
+                } else {
+                    document.getElementById('messages').innerText += "No previous chat history.\n";
+                }
+                chatHistoryLoaded = true;
+            } else {
+                document.getElementById('messages').innerText += "Error fetching chat history.\n";
+            }
+        } catch (error) {
+            console.error('Error fetching chat history:', error);
+            document.getElementById('messages').innerText += "Error fetching chat history.\n";
+        }
+    }
+
+    function connect() {
+        if (!userId || !jwtToken) {
+            alert('Please enter your JWT token.');
+            return;
+        }
+
+        ws = new WebSocket(`ws://localhost:8080/ws?token=${jwtToken}`);
+
+        ws.onopen = function() {
+            console.log('Connected to server');
+            document.getElementById('messages').innerText += 'Connected to server\n';
+        };
+
+        ws.onmessage = function(event) {
+            const message = event.data;
+            document.getElementById('messages').innerText += `[SERVER] ${message}\n`;
+        };
+
+        ws.onclose = function() {
+            console.log('Connection closed by server');
+            document.getElementById('messages').innerText += 'Connection closed by server\n';
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+    }
+
+    function sendMessage() {
+        const message = document.getElementById('message').value;
+        if (!recipientId || !message) {
+            alert('Please enter recipient ID and message');
+            return;
+        }
+
+        const fullMessage = `${recipientId}|${message}`;
+        ws.send(fullMessage);
+
+        document.getElementById('messages').innerText += `Me: ${message}\n`;
+        document.getElementById('message').value = '';
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    depends_on:
+      - database
+    build:
+      context: ./backend
+    environment:
+      - CREAM_JWT_SECRET=123456
+      - CREAM_DB_HOST=database
+      - CREAM_DB_USERNAME=postgres
+      - CREAM_DB_PASSWORD=postgres
+      - CREAM_DB_NAME=postgres
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "8080:8080"
+  database:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+  frontend:
+    build:
+      context: ./frontend/Cream
+    ports:
+      - "8081:8081"

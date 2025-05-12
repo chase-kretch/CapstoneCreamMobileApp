@@ -1,0 +1,61 @@
+﻿name: Create Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      migrationName:
+        description: 'Migration Name'
+        required: true
+        type: string
+
+jobs:
+  create-permanent-migrations:
+    if:
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        dotnet-version: ['8.0.x']
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup dotnet ${{ matrix.dotnet-version }}
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ matrix.dotnet-version }}
+      - name: Display dotnet version
+        run: dotnet --version
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Remove current Migrations folder and copy from GithubMigrations
+        run: |
+          rm -rf backend/Migrations 
+          cp -R GithubMigrations backend/Migrations
+
+      - name: Create Sqlite Migrations
+        working-directory: backend
+        run: dotnet ef migrations add PermanentMigration${{ github.event.inputs.migrationName }} --context CreamSqliteDbContext --output-dir Migrations/SqliteMigrations
+
+      - name: Create Postgres Migrations
+        working-directory: backend
+        run: dotnet ef migrations add PermanentMigration${{ github.event.inputs.migrationName }} --context CreamPostgresDbContext --output-dir Migrations/PostgresMigrations
+
+      - name: Update GithubMigrations with new changes
+        run: |
+          rm -rf GithubMigrations
+          cp -R backend/Migrations GithubMigrations
+
+      - name: Add changes to git
+        run: |
+          git add backend/Migrations
+          git add GithubMigrations
+
+      - name: Push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'Add migration ${{ github.event.inputs.migrationName }}'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
