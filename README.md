@@ -3,11 +3,11 @@
 # NOTE: NO LONGER LIVE! REMOVED API KEYS TO FORK, CAN STILL FOLLOW STEPS TO RUN LOCALLY
 
 ## Contributors
-- Eli Chandler
-- Chase Kretschmar
-- David Wu
-- Jack Hittle
-- John Minton
+- Eli Chandler (Team Lead, Backend + Dev Ops)
+- Chase Kretschmar (Full-Stack)
+- David Wu (Frontend)
+- Jack Hittle (Frontend)
+- John Minton (Messaging)
 
 ## Description
 No financial barriers, no boosting, no shadow banning. Just results.
